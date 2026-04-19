@@ -24,6 +24,14 @@ pip install pydsscodec
 If a prebuilt wheel is not available for your platform, installation will build
 the Rust extension locally.
 
+Prebuilt wheels are currently published for:
+
+- Linux `x86_64`
+- macOS `arm64`
+- Windows `x86_64`
+
+Other platforms install from source and require a local Rust toolchain.
+
 ## Usage
 
 Decode a file:
