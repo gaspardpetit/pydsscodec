@@ -88,5 +88,18 @@ jobs:
       - name: Run upstream Rust tests
         run: cargo test --manifest-path ext/dss-codec/dss-codec/Cargo.toml --locked
 
-      - name: Build distributions
-        run: uv build
+      - name: Build source distribution
+        if: runner.os == 'Linux'
+        run: uv build --sdist
+
+      - name: Build Linux wheel
+        if: runner.os == 'Linux'
+        uses: PyO3/maturin-action@v1
+        with:
+          command: build
+          manylinux: "2014"
+          args: --release --out dist -i python3.10
+
+      - name: Build non-Linux wheels
+        if: runner.os != 'Linux'
+        run: uv build --wheel

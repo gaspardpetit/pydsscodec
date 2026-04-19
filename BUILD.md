@@ -56,6 +56,10 @@ uv build
 The source distribution includes the Rust sources from the submodule so source
 installs do not need to fetch `dss-codec` from the network.
 
+PyPI-compatible Linux wheels need a manylinux build environment. In GitHub
+Actions this repository uses `PyO3/maturin-action` with `manylinux: 2014` for
+the Linux wheel build.
+
 ## Publish
 
 Publish to PyPI with:
