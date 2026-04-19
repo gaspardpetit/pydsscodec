@@ -1,6 +1,6 @@
 [package]
 name = "pydsscodec"
-version = "0.1.0"
+version = "0.1.4-dev"
 edition = "2021"
 license = "MIT"
 description = "Python bindings for the dss-codec Rust decoder"

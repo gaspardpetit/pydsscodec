@@ -277,7 +277,7 @@ dependencies = [
 
 [[package]]
 name = "pydsscodec"
-version = "0.1.0"
+version = "0.1.4-dev"
 dependencies = [
  "dss-codec",
  "pyo3",

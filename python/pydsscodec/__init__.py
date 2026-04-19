@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
 from os import PathLike, fspath
+import re
 from typing import Optional, Union
 
 from ._core import DecodedAudio
@@ -73,10 +74,27 @@ def _normalize_password(password: Password) -> Optional[bytes]:
     raise TypeError("password must be str, bytes, or None")
 
 
+def _normalize_fallback_version(raw_version: str) -> str:
+    match = re.fullmatch(
+        r"(?P<core>\d+\.\d+\.\d+)(?:-(?P<label>dev|a|b|rc|alpha|beta)(?:\.(?P<num>\d+))?)?",
+        raw_version,
+    )
+    if not match:
+        return raw_version
+
+    label = match.group("label")
+    if label is None:
+        return match.group("core")
+
+    pep440_label = {"alpha": "a", "beta": "b"}.get(label, label)
+    number = match.group("num") or "0"
+    return f"{match.group('core')}.{pep440_label}{number}"
+
+
 try:
     __version__ = version("pydsscodec")
 except PackageNotFoundError:
-    __version__ = _crate_version()
+    __version__ = _normalize_fallback_version(_crate_version())
 
 
 __all__ = [

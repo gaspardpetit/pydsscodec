@@ -189,3 +189,22 @@ def test_decrypting_decoder_streamer_push_after_finish_errors() -> None:
 
     with pytest.raises(RuntimeError, match="already finished"):
         decoder.push(b"\x03ds2")
+
+
+@pytest.mark.parametrize(
+    ("raw_version", "expected"),
+    [
+        ("0.1.4", "0.1.4"),
+        ("0.1.4-dev", "0.1.4.dev0"),
+        ("0.1.4-dev.3", "0.1.4.dev3"),
+        ("0.1.4-alpha", "0.1.4.a0"),
+        ("0.1.4-alpha.2", "0.1.4.a2"),
+        ("0.1.4-beta.5", "0.1.4.b5"),
+        ("0.1.4-rc.1", "0.1.4.rc1"),
+        ("garbage", "garbage"),
+    ],
+)
+def test_normalize_fallback_version(raw_version: str, expected: str) -> None:
+    from pydsscodec.__init__ import _normalize_fallback_version
+
+    assert _normalize_fallback_version(raw_version) == expected

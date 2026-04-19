@@ -7,6 +7,7 @@ module.
 
 - Python packaging is configured in `pyproject.toml`
 - The Rust extension crate for Python lives in `Cargo.toml` and `src/lib.rs`
+- `Cargo.toml` is the single source of truth for package versioning
 - The upstream `dss-codec` repository is included as a git submodule at
   `ext/dss-codec`
 - The Rust crate used by this package is `ext/dss-codec/dss-codec`
@@ -59,6 +60,10 @@ installs do not need to fetch `dss-codec` from the network.
 PyPI-compatible Linux wheels need a manylinux build environment. In GitHub
 Actions this repository uses `PyO3/maturin-action` with `manylinux: 2014` for
 the Linux wheel build.
+
+Local builds use the prerelease version committed in `Cargo.toml` (for example
+`0.1.4-dev`). Release builds rewrite `Cargo.toml` from the Git tag, so a tag
+like `v0.1.4` publishes version `0.1.4`.
 
 ## Publish
 

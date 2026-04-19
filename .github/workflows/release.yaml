@@ -29,6 +29,25 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Set release version from tag
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if (-not $tag) {
+            throw "github.ref_name is empty"
+          }
+
+          $version = $tag -replace '^v', ''
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Release tag '$tag' must be in the form vX.Y.Z"
+          }
+
+          Write-Host "Using package version: $version"
+
+          $cargo = Get-Content Cargo.toml -Raw
+          $cargo = [regex]::Replace($cargo, '(?m)^version = ".*"$', "version = `"$version`"", 1)
+          Set-Content Cargo.toml $cargo -Encoding utf8
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
