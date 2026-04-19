@@ -50,7 +50,7 @@ jobs:
         run: uv run pytest
 
       - name: Run upstream Rust tests
-        run: cargo test --manifest-path ext/dss-codec/dss-codec/Cargo.toml --locked
+        run: cargo test --manifest-path ext/dss-codec/dss-codec/Cargo.toml --locked -- --test-threads=1
 
       - name: Build source distribution
         if: runner.os == 'Linux'
