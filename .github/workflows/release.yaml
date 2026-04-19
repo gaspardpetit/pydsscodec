@@ -43,6 +43,15 @@ jobs:
           rustflags: ""
           cache-workspaces: . -> target
 
+      - name: Sync dependencies
+        run: uv sync --group dev
+
+      - name: Run Python tests
+        run: uv run pytest
+
+      - name: Run upstream Rust tests
+        run: cargo test --manifest-path ext/dss-codec/dss-codec/Cargo.toml --locked
+
       - name: Build distributions
         run: uv build
 
