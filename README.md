@@ -1,3 +1,8 @@
+[![CI](https://github.com/gaspardpetit/pydsscodec/actions/workflows/ci.yaml/badge.svg)](https://github.com/gaspardpetit/pydsscodec/actions/workflows/ci.yaml)
+![PyPI - Version](https://img.shields.io/pypi/v/pydsscodec)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pydsscodec)
+
+
 # pydsscodec
 
 Python bindings for the Rust [`dss-codec`](https://github.com/gaspardpetit/dss-codec) decoder.
