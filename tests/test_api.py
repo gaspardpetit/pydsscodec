@@ -8,6 +8,7 @@ from pydsscodec import DecryptingDecoderStreamer
 from pydsscodec import DecryptStreamer
 from pydsscodec import StreamingDecoder
 from pydsscodec import decode_bytes
+from pydsscodec import decode_file
 from pydsscodec import decrypt_bytes
 from pydsscodec import decrypt_file
 from pydsscodec import detect_format
@@ -27,16 +28,64 @@ def make_truncated_ds2_qp_file(frame_count: int) -> bytes:
     return bytes(data)
 
 
-def test_detect_format_for_qp_bytes() -> None:
-    assert detect_format(make_truncated_ds2_qp_file(10)) == "ds2_qp"
+def make_truncated_ds2_sp_file(frame_count: int) -> bytes:
+    data = bytearray(0x600)
+    data[:4] = b"\x03ds2"
+
+    block = bytearray(512)
+    block[2] = frame_count
+    block[4] = 0
+    for index in range(6, len(block)):
+        block[index] = ((index - 6) * 5 + 7) % 256
+
+    data.extend(block)
+    return bytes(data)
 
 
-def test_decode_bytes_returns_audio_metadata() -> None:
-    audio = decode_bytes(make_truncated_ds2_qp_file(10))
+def make_truncated_dss_sp_file(frame_count: int) -> bytes:
+    data = bytearray(1024)
+    data[0] = 2
+    data[1:4] = b"dss"
 
-    assert audio.format == "ds2_qp"
-    assert audio.sample_rate == 16000
-    assert audio.native_rate == 16000
+    block = bytearray(512)
+    block[2] = frame_count
+    for index in range(6, len(block)):
+        block[index] = ((index - 6) * 7 + 3) % 256
+
+    data.extend(block)
+    return bytes(data)
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected_format"),
+    [
+        (make_truncated_ds2_qp_file(10), "ds2_qp"),
+        (make_truncated_ds2_sp_file(10), "ds2_sp"),
+        (make_truncated_dss_sp_file(10), "dss_sp"),
+    ],
+)
+def test_detect_format(payload: bytes, expected_format: str) -> None:
+    assert detect_format(payload) == expected_format
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected_format", "expected_rate"),
+    [
+        (make_truncated_ds2_qp_file(10), "ds2_qp", 16000),
+        (make_truncated_ds2_sp_file(13), "ds2_sp", 12000),
+        (make_truncated_dss_sp_file(13), "dss_sp", 11025),
+    ],
+)
+def test_decode_bytes_returns_audio_metadata(
+    payload: bytes,
+    expected_format: str,
+    expected_rate: int,
+) -> None:
+    audio = decode_bytes(payload)
+
+    assert audio.format == expected_format
+    assert audio.sample_rate == expected_rate
+    assert audio.native_rate == expected_rate
     assert audio.sample_count > 0
     assert audio.duration_seconds > 0
 
@@ -52,6 +101,32 @@ def test_decrypt_file_passes_through_plain_input(tmp_path: Path) -> None:
     input_path.write_bytes(data)
 
     assert decrypt_file(input_path) == data
+
+
+@pytest.mark.parametrize(
+    ("filename", "payload", "expected_format", "expected_rate"),
+    [
+        ("sample_qp.ds2", make_truncated_ds2_qp_file(10), "ds2_qp", 16000),
+        ("sample_sp.ds2", make_truncated_ds2_sp_file(13), "ds2_sp", 12000),
+        ("sample.dss", make_truncated_dss_sp_file(13), "dss_sp", 11025),
+    ],
+)
+def test_decode_file_returns_audio_metadata(
+    tmp_path: Path,
+    filename: str,
+    payload: bytes,
+    expected_format: str,
+    expected_rate: int,
+) -> None:
+    input_path = tmp_path / filename
+    input_path.write_bytes(payload)
+
+    audio = decode_file(input_path)
+
+    assert audio.format == expected_format
+    assert audio.sample_rate == expected_rate
+    assert audio.native_rate == expected_rate
+    assert audio.sample_count > 0
 
 
 def test_streaming_decoder_detects_format_and_errors_on_truncated_finish() -> None:
