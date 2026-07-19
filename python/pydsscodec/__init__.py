@@ -8,6 +8,7 @@ from typing import Optional, Union
 from ._core import DecodedAudio
 from ._core import DecryptingDecoderStreamer as _CoreDecryptingDecoderStreamer
 from ._core import DecryptStreamer as _CoreDecryptStreamer
+from ._core import FileInfo
 from ._core import StreamingDecoder
 from ._core import crate_version as _crate_version
 from ._core import decode_bytes as _decode_bytes
@@ -15,6 +16,8 @@ from ._core import decode_file as _decode_file
 from ._core import decrypt_bytes as _decrypt_bytes
 from ._core import decrypt_file as _decrypt_file
 from ._core import detect_format
+from ._core import inspect_bytes
+from ._core import inspect_file as _inspect_file
 
 Pathish = Union[str, PathLike[str]]
 Password = Optional[Union[str, bytes]]
@@ -34,6 +37,10 @@ def decrypt_bytes(data: bytes, password: Password = None) -> bytes:
 
 def decrypt_file(path: Pathish, password: Password = None) -> bytes:
     return _decrypt_file(fspath(path), _normalize_password(password))
+
+
+def inspect_file(path: Pathish) -> FileInfo:
+    return _inspect_file(fspath(path))
 
 
 class DecryptStreamer:
@@ -101,6 +108,7 @@ __all__ = [
     "DecodedAudio",
     "DecryptStreamer",
     "DecryptingDecoderStreamer",
+    "FileInfo",
     "StreamingDecoder",
     "__version__",
     "decode_bytes",
@@ -108,4 +116,6 @@ __all__ = [
     "decrypt_bytes",
     "decrypt_file",
     "detect_format",
+    "inspect_bytes",
+    "inspect_file",
 ]

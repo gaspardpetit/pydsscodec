@@ -5,6 +5,7 @@ use dss_codec::streaming::{
     DecryptingDecoderStreamer as RustDecryptingDecoderStreamer,
     StreamingDecoder as RustStreamingDecoder,
 };
+use dss_codec::EncryptionInfo;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use std::path::Path;
@@ -60,6 +61,44 @@ impl DecodedAudio {
             self.sample_rate,
             self.native_rate,
             self.samples.len()
+        )
+    }
+}
+
+#[pyclass(module = "pydsscodec._core")]
+struct FileInfo {
+    format: String,
+    native_rate: u32,
+    encryption: String,
+    encryption_mode: Option<u16>,
+}
+
+#[pymethods]
+impl FileInfo {
+    #[getter]
+    fn format(&self) -> &str {
+        &self.format
+    }
+
+    #[getter]
+    fn native_rate(&self) -> u32 {
+        self.native_rate
+    }
+
+    #[getter]
+    fn encryption(&self) -> &str {
+        &self.encryption
+    }
+
+    #[getter]
+    fn encryption_mode(&self) -> Option<u16> {
+        self.encryption_mode
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "FileInfo(format={:?}, native_rate={}, encryption={:?}, encryption_mode={:?})",
+            self.format, self.native_rate, self.encryption, self.encryption_mode
         )
     }
 }
@@ -181,6 +220,20 @@ fn detect_format(data: &[u8]) -> Option<&'static str> {
 }
 
 #[pyfunction]
+fn inspect_bytes(data: &[u8]) -> PyResult<FileInfo> {
+    dss_codec::inspect_bytes(data)
+        .map(convert_file_info)
+        .map_err(decode_error_to_pyerr)
+}
+
+#[pyfunction]
+fn inspect_file(path: &str) -> PyResult<FileInfo> {
+    dss_codec::inspect_file(Path::new(path))
+        .map(convert_file_info)
+        .map_err(decode_error_to_pyerr)
+}
+
+#[pyfunction]
 fn crate_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
@@ -191,6 +244,22 @@ fn convert_audio(audio: dss_codec::AudioBuffer) -> DecodedAudio {
         sample_rate: audio.native_rate,
         native_rate: audio.native_rate,
         format: format_name(audio.format).to_string(),
+    }
+}
+
+fn convert_file_info(info: dss_codec::FileInfo) -> FileInfo {
+    let (encryption, encryption_mode) = match info.encryption {
+        EncryptionInfo::None => ("none", None),
+        EncryptionInfo::EncryptedDs2Aes128 => ("ds2_aes128", Some(1)),
+        EncryptionInfo::EncryptedDs2Aes256 => ("ds2_aes256", Some(2)),
+        EncryptionInfo::EncryptedUnknown(mode) => ("unknown", Some(mode)),
+    };
+
+    FileInfo {
+        format: format_name(info.format).to_string(),
+        native_rate: info.native_rate(),
+        encryption: encryption.to_string(),
+        encryption_mode,
     }
 }
 
@@ -211,6 +280,7 @@ fn decode_error_to_pyerr(err: DecodeError) -> PyErr {
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<DecodedAudio>()?;
+    m.add_class::<FileInfo>()?;
     m.add_class::<StreamingDecoder>()?;
     m.add_class::<DecryptStreamer>()?;
     m.add_class::<DecryptingDecoderStreamer>()?;
@@ -219,6 +289,8 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(decrypt_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(decrypt_file, m)?)?;
     m.add_function(wrap_pyfunction!(detect_format, m)?)?;
+    m.add_function(wrap_pyfunction!(inspect_bytes, m)?)?;
+    m.add_function(wrap_pyfunction!(inspect_file, m)?)?;
     m.add_function(wrap_pyfunction!(crate_version, m)?)?;
     Ok(())
 }

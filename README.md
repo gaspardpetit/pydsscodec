@@ -17,6 +17,7 @@ decoders.
 - Decode DSS SP, Grundig DSS SP, DS2 SP, DS2 QP, and DS2 QP7 files from paths
   or bytes
 - Normalize encrypted DS2 input back to plain container bytes
+- Inspect format, native sample rate, and encryption metadata without decoding
 - Stream decode in chunks without forcing a whole-file convenience path
 - Load native Rust code in-process instead of shelling out to a CLI
 - In our benchmark, achieved roughly 150x faster DSS decoding and 50x faster
@@ -93,6 +94,15 @@ fmt = detect_format(data)
 print(fmt)  # e.g. "dss_sp", "grundig_sp", "ds2_sp", "ds2_qp", or "ds2_qp7"
 ```
 
+Inspect format and encryption metadata without decoding:
+
+```python
+from pydsscodec import inspect_file
+
+info = inspect_file("recording.ds2")
+print(info.format, info.native_rate, info.encryption, info.encryption_mode)
+```
+
 ## API
 
 Top-level functions:
@@ -102,6 +112,8 @@ Top-level functions:
 - `decrypt_file(path, password=None) -> bytes`
 - `decrypt_bytes(data, password=None) -> bytes`
 - `detect_format(data) -> str | None`
+- `inspect_file(path) -> FileInfo`
+- `inspect_bytes(data) -> FileInfo`
 
 Streamer classes:
 
@@ -125,6 +137,13 @@ Bulk decode returns a `DecodedAudio` object with:
   `"ds2_qp7"`
 - `sample_count`
 - `duration_seconds`
+
+Inspection returns a `FileInfo` object with:
+
+- `format`: detected audio format
+- `native_rate`: native sample rate in Hz
+- `encryption`: `"none"`, `"ds2_aes128"`, `"ds2_aes256"`, or `"unknown"`
+- `encryption_mode`: the numeric DS2 encryption mode, or `None` for plain input
 
 ## Notes
 
