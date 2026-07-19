@@ -45,8 +45,25 @@ jobs:
           Write-Host "Using package version: $version"
 
           $cargo = Get-Content Cargo.toml -Raw
-          $cargo = [regex]::Replace($cargo, '(?m)^version = ".*"$', "version = `"$version`"", 1)
-          Set-Content Cargo.toml $cargo -Encoding utf8
+          $versionPattern = '(?m)^version = "[^"]*"\r?$'
+          $matches = [regex]::Matches($cargo, $versionPattern)
+          if ($matches.Count -ne 1) {
+            throw "Expected exactly one package version in Cargo.toml, found $($matches.Count)"
+          }
+
+          $cargo = [regex]::Replace(
+            $cargo,
+            $versionPattern,
+            "version = `"$version`"",
+            1
+          )
+          Set-Content Cargo.toml $cargo -Encoding utf8 -NoNewline
+
+          $updatedCargo = Get-Content Cargo.toml -Raw
+          $expectedVersion = "version = `"$version`""
+          if ($updatedCargo -notmatch "(?m)^$([regex]::Escape($expectedVersion))\r?$") {
+            throw "Cargo.toml package version was not updated to $version"
+          }
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -108,6 +125,27 @@ jobs:
           path: dist
           pattern: dist-*
           merge-multiple: true
+
+      - name: Validate distribution versions
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          $expectedPrefix = "pydsscodec-$version"
+          $distributions = @(Get-ChildItem dist -File)
+
+          if ($distributions.Count -eq 0) {
+            throw "No distributions were downloaded"
+          }
+
+          $unexpected = @(
+            $distributions | Where-Object { -not $_.Name.StartsWith($expectedPrefix) }
+          )
+          if ($unexpected.Count -gt 0) {
+            $names = $unexpected.Name -join ', '
+            throw "Distributions do not match release version ${version}: $names"
+          }
+
+          Write-Host "Validated $($distributions.Count) distributions for version $version"
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
