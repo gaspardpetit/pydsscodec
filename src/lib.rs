@@ -199,6 +199,8 @@ fn format_name(format: demux::AudioFormat) -> &'static str {
         demux::AudioFormat::DssSp => "dss_sp",
         demux::AudioFormat::Ds2Sp => "ds2_sp",
         demux::AudioFormat::Ds2Qp => "ds2_qp",
+        demux::AudioFormat::Ds2Qp7 => "ds2_qp7",
+        demux::AudioFormat::GrundigSp => "grundig_sp",
     }
 }
 

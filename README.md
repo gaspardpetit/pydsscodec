@@ -7,13 +7,15 @@
 
 Python bindings for the Rust [`dss-codec`](https://github.com/gaspardpetit/dss-codec) decoder.
 
-`pydsscodec` decodes Olympus DSS and DS2 audio directly in Python through a
-native Rust extension. It mirrors the core `dss-codec` model: top-level decode
-and decrypt functions plus streaming decoders.
+`pydsscodec` decodes Olympus DSS and DS2 audio, including Grundig/PH9607 DSS,
+directly in Python through a native Rust extension. It mirrors the core
+`dss-codec` model: top-level decode and decrypt functions plus streaming
+decoders.
 
 ## Features
 
-- Decode DSS and DS2 files from paths or bytes
+- Decode DSS SP, Grundig DSS SP, DS2 SP, DS2 QP, and DS2 QP7 files from paths
+  or bytes
 - Normalize encrypted DS2 input back to plain container bytes
 - Stream decode in chunks without forcing a whole-file convenience path
 - Load native Rust code in-process instead of shelling out to a CLI
@@ -35,7 +37,7 @@ Prebuilt wheels are currently published for:
 - macOS `arm64`
 - Windows `x86_64`
 
-Other platforms install from source and require a local Rust toolchain.
+Other platforms install from source and require Rust 1.85 or newer.
 
 ## Usage
 
@@ -88,7 +90,7 @@ Detect the container format without decoding:
 from pydsscodec import detect_format
 
 fmt = detect_format(data)
-print(fmt)  # "dss_sp", "ds2_sp", or "ds2_qp"
+print(fmt)  # e.g. "dss_sp", "grundig_sp", "ds2_sp", "ds2_qp", or "ds2_qp7"
 ```
 
 ## API
@@ -119,7 +121,8 @@ Bulk decode returns a `DecodedAudio` object with:
 - `samples`: decoded mono samples as `list[float]`
 - `sample_rate`: sample rate of the returned samples
 - `native_rate`: original sample rate of the source codec
-- `format`: one of `"dss_sp"`, `"ds2_sp"`, or `"ds2_qp"`
+- `format`: one of `"dss_sp"`, `"grundig_sp"`, `"ds2_sp"`, `"ds2_qp"`, or
+  `"ds2_qp7"`
 - `sample_count`
 - `duration_seconds`
 

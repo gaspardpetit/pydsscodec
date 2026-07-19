@@ -28,6 +28,18 @@ def make_truncated_ds2_qp_file(frame_count: int) -> bytes:
     return bytes(data)
 
 
+def make_truncated_ds2_qp7_file(frame_count: int) -> bytes:
+    data = bytearray(make_truncated_ds2_qp_file(frame_count))
+    data[0x600 + 4] = 7
+    return bytes(data)
+
+
+def make_grundig_dss_file() -> bytes:
+    data = bytearray(6 * 512)
+    data[:4] = b"\x06dss"
+    return bytes(data)
+
+
 def make_truncated_ds2_sp_file(frame_count: int) -> bytes:
     data = bytearray(0x600)
     data[:4] = b"\x03ds2"
@@ -60,8 +72,10 @@ def make_truncated_dss_sp_file(frame_count: int) -> bytes:
     ("payload", "expected_format"),
     [
         (make_truncated_ds2_qp_file(10), "ds2_qp"),
+        (make_truncated_ds2_qp7_file(10), "ds2_qp7"),
         (make_truncated_ds2_sp_file(10), "ds2_sp"),
         (make_truncated_dss_sp_file(10), "dss_sp"),
+        (make_grundig_dss_file(), "grundig_sp"),
     ],
 )
 def test_detect_format(payload: bytes, expected_format: str) -> None:
@@ -129,7 +143,7 @@ def test_decode_file_returns_audio_metadata(
     assert audio.sample_count > 0
 
 
-def test_streaming_decoder_detects_format_and_errors_on_truncated_finish() -> None:
+def test_streaming_decoder_buffers_partial_qp_segment_until_finish() -> None:
     data = make_truncated_ds2_qp_file(10)
     decoder = StreamingDecoder()
 
@@ -138,12 +152,11 @@ def test_streaming_decoder_detects_format_and_errors_on_truncated_finish() -> No
     assert decoder.native_rate() is None
 
     streamed = decoder.push(data[4:])
-    assert streamed
+    assert streamed == []
     assert decoder.format() == "ds2_qp"
     assert decoder.native_rate() == 16000
 
-    with pytest.raises(RuntimeError, match="truncated"):
-        decoder.finish()
+    assert len(decoder.finish()) == 10 * 256
 
 
 def test_streaming_decoder_push_after_finish_errors() -> None:
@@ -167,7 +180,7 @@ def test_decrypt_streamer_plain_passthrough_and_error() -> None:
         bad.push(b"nope")
 
 
-def test_decrypting_decoder_streamer_detects_format_and_errors_on_truncated_finish() -> None:
+def test_decrypting_decoder_streamer_buffers_partial_qp_segment_until_finish() -> None:
     data = make_truncated_ds2_qp_file(10)
     decoder = DecryptingDecoderStreamer()
 
@@ -175,12 +188,11 @@ def test_decrypting_decoder_streamer_detects_format_and_errors_on_truncated_fini
     second = decoder.push(data[4:])
 
     assert first == []
-    assert second
+    assert second == []
     assert decoder.format() == "ds2_qp"
     assert decoder.native_rate() == 16000
 
-    with pytest.raises(RuntimeError, match="truncated"):
-        decoder.finish()
+    assert len(decoder.finish()) == 10 * 256
 
 
 def test_decrypting_decoder_streamer_push_after_finish_errors() -> None:
