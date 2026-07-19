@@ -12,6 +12,8 @@ from pydsscodec import decode_file
 from pydsscodec import decrypt_bytes
 from pydsscodec import decrypt_file
 from pydsscodec import detect_format
+from pydsscodec import inspect_bytes
+from pydsscodec import inspect_file
 
 
 def make_truncated_ds2_qp_file(frame_count: int) -> bytes:
@@ -37,6 +39,14 @@ def make_truncated_ds2_qp7_file(frame_count: int) -> bytes:
 def make_grundig_dss_file() -> bytes:
     data = bytearray(6 * 512)
     data[:4] = b"\x06dss"
+    return bytes(data)
+
+
+def make_encrypted_ds2_file(mode: int, format_type: int) -> bytes:
+    data = bytearray(0x800)
+    data[:4] = b"\x03enc"
+    data[0x146:0x148] = mode.to_bytes(2, "little")
+    data[0x604] = format_type
     return bytes(data)
 
 
@@ -80,6 +90,40 @@ def make_truncated_dss_sp_file(frame_count: int) -> bytes:
 )
 def test_detect_format(payload: bytes, expected_format: str) -> None:
     assert detect_format(payload) == expected_format
+
+
+def test_inspect_bytes_returns_format_rate_and_plain_encryption() -> None:
+    info = inspect_bytes(make_truncated_ds2_qp7_file(10))
+
+    assert info.format == "ds2_qp7"
+    assert info.native_rate == 16000
+    assert info.encryption == "none"
+    assert info.encryption_mode is None
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected_encryption"),
+    [(1, "ds2_aes128"), (2, "ds2_aes256"), (99, "unknown")],
+)
+def test_inspect_bytes_returns_encryption_metadata(
+    mode: int, expected_encryption: str
+) -> None:
+    info = inspect_bytes(make_encrypted_ds2_file(mode, 6))
+
+    assert info.format == "ds2_qp"
+    assert info.native_rate == 16000
+    assert info.encryption == expected_encryption
+    assert info.encryption_mode == mode
+
+
+def test_inspect_file_accepts_pathlike(tmp_path: Path) -> None:
+    input_path = tmp_path / "sample.ds2"
+    input_path.write_bytes(make_truncated_ds2_sp_file(10))
+
+    info = inspect_file(input_path)
+
+    assert info.format == "ds2_sp"
+    assert info.native_rate == 12000
 
 
 @pytest.mark.parametrize(
